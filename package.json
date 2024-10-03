@@ -9,8 +9,8 @@
     "lint": "bun x biome check .",
     "lint:fix": "bun x biome lint . --write --unsafe"
   },
-  "name": "@dashboard/actions",
-  "version": "0.0.3",
+  "name": "@rubriclab/actions",
+  "version": "0.0.4",
   "main": "index.ts",
   "dependencies": {
     "@rubriclab/package": "*"
