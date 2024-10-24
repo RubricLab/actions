@@ -1,3 +1,4 @@
+- [2024-10-24] [add notify-monorepo action](https://github.com/RubricLab/actions/commit/6114893404f23d68deebfdd521d3aa2dd09617df)
 - [2024-10-22] [add tsconfig to actions](https://github.com/RubricLab/actions/commit/ee614af0fd2366b6f20f5799d9baebd82e1d203c)
 - [2024-10-03] [mod lint script](https://github.com/RubricLab/actions/commit/ac5fd2794fd2702d5c3b290e0ee0ce7aa3fb09eb)
 - [2024-10-03] [gitignore turbo, format](https://github.com/RubricLab/actions/commit/d0f0154dbcd6adfcc3dd8c36f744c3b8241c8134)
