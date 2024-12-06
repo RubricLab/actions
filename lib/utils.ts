@@ -1,81 +1,152 @@
+import crypto from 'node:crypto'
 import { z } from 'zod'
-import type { Action, ActionContext, HandlerReturnType } from './types'
+import { zodToJsonSchema } from 'zod-to-json-schema'
+import type { ActionChain, GenericActions } from './types'
 
-export function createAction<T extends z.ZodTypeAny, R>(config: {
-	schema: T
-	handler: (params: z.infer<T>, context: ActionContext) => Promise<R>
-}): Action<T, R> {
-	return config
+function hashSchema(schemaJson: any): string {
+	const jsonString = JSON.stringify(schemaJson, Object.keys(schemaJson).sort())
+	const hash = crypto.createHash('sha256').update(jsonString).digest('hex')
+	return hash.slice(0, 8)
 }
-export function createActionsSchemas<
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	AP extends Record<string, Action<any, any>>
->(actions: AP) {
-	type ActionName = keyof AP
-	return {
-		actionsSchemas: z.discriminatedUnion(
-			'action',
-			Object.entries(actions).map(([actionName, actionConfig]) =>
-				z.object({
-					action: z.literal(actionName as ActionName),
-					params: actionConfig.schema
-				})
-			) as [
-				z.ZodObject<{
-					action: z.ZodLiteral<ActionName>
-					params: (typeof actions)[ActionName]['schema']
-				}>,
-				...z.ZodObject<{
-					action: z.ZodLiteral<ActionName>
-					params: (typeof actions)[ActionName]['schema']
-				}>[]
-			]
-		)
+
+const schemaNameCache = new WeakMap<z.ZodTypeAny, string>()
+
+export function getStableTypeName(schema: z.ZodTypeAny): string {
+	if (schemaNameCache.has(schema)) {
+		return schemaNameCache.get(schema) ?? (undefined as never)
 	}
+
+	if (schema instanceof z.ZodString) {
+		schemaNameCache.set(schema, 'string')
+		return 'string'
+	}
+	if (schema instanceof z.ZodNumber) {
+		schemaNameCache.set(schema, 'number')
+		return 'number'
+	}
+	if (schema instanceof z.ZodBoolean) {
+		schemaNameCache.set(schema, 'boolean')
+		return 'boolean'
+	}
+	if (schema instanceof z.ZodVoid) {
+		schemaNameCache.set(schema, 'void')
+		return 'void'
+	}
+
+	if (schema instanceof z.ZodObject) {
+		const jsonSchema = zodToJsonSchema(schema, { $refStrategy: 'none' })
+		const hash = hashSchema(jsonSchema)
+		const typeName = `object_${hash}`
+		schemaNameCache.set(schema, typeName)
+		return typeName
+	}
+
+	schemaNameCache.set(schema, 'unknown')
+	return 'unknown'
 }
 
-export function createActionsActions<
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	AP extends Record<string, Action<any, any>>
->(actions: AP) {
-	type ActionName = keyof AP
+export function createChainSchema<Actions extends GenericActions>(
+	actions: Actions
+): z.ZodType<ActionChain<Actions>> {
+	const chainSchema: z.ZodType<ActionChain<Actions>> = z.lazy(() => {
+		const variants = Object.keys(actions).map(actionName => {
+			const action = actions[actionName] ?? (undefined as never)
+			const inputShape = action.schema.input.shape
 
-	const actionSchemas = z.discriminatedUnion(
-		'action',
-		Object.entries(actions).map(([actionName, actionConfig]) =>
-			z.object({
-				action: z.literal(actionName as ActionName),
-				params: actionConfig.schema
+			const paramSchemas = Object.fromEntries(
+				Object.entries(inputShape).map(([paramName, paramType]) => {
+					return [paramName, z.union([paramType, chainSchema])]
+				})
+			)
+
+			return z.object({
+				action: z.literal(actionName),
+				params: z.object(paramSchemas)
 			})
-		) as [
-			z.ZodObject<{
-				action: z.ZodLiteral<ActionName>
-				params: (typeof actions)[ActionName]['schema']
-			}>,
-			...z.ZodObject<{
-				action: z.ZodLiteral<ActionName>
-				params: (typeof actions)[ActionName]['schema']
-			}>[]
-		]
-	)
+		})
+		return z.union(variants) as z.ZodType<ActionChain<Actions>>
+	})
+
+	return chainSchema
+}
+
+export function createJsonSchema<Actions extends GenericActions>(actions: Actions) {
+	const actionsByOutputType: Record<string, string[]> = {}
+	for (const actionName in actions) {
+		const action = actions[actionName] ?? (undefined as never)
+		const outputTypeName = getStableTypeName(action.schema.output)
+		if (!actionsByOutputType[outputTypeName]) {
+			actionsByOutputType[outputTypeName] = []
+		}
+		actionsByOutputType[outputTypeName].push(actionName)
+	}
+
+	function actionUnionRefFor(outputTypeName: string) {
+		return `#/definitions/ActionUnionThatOutputs_${outputTypeName}`
+	}
+
+	const definitions: Record<string, any> = {}
+
+	for (const actionName in actions) {
+		const action = actions[actionName] ?? (undefined as never)
+		const inputObject = action.schema.input
+
+		const paramProperties: Record<string, any> = {}
+		const requiredParams = Object.keys(inputObject.shape)
+
+		for (const [paramName, paramSchema] of Object.entries(inputObject.shape)) {
+			const paramJsonSchema = zodToJsonSchema(paramSchema, { $refStrategy: 'none' })
+			const paramTypeName = getStableTypeName(paramSchema)
+
+			const anyOfSchemas = [paramJsonSchema]
+			if (actionsByOutputType[paramTypeName] && actionsByOutputType[paramTypeName].length > 0) {
+				anyOfSchemas.push({ $ref: actionUnionRefFor(paramTypeName) })
+			}
+
+			paramProperties[paramName] = { anyOf: anyOfSchemas }
+		}
+
+		definitions[actionName] = {
+			type: 'object',
+			properties: {
+				action: { type: 'string', const: actionName },
+				params: {
+					type: 'object',
+					properties: paramProperties,
+					required: requiredParams,
+					additionalProperties: false
+				}
+			},
+			required: ['action', 'params'],
+			additionalProperties: false
+		}
+	}
+
+	for (const outputTypeName in actionsByOutputType) {
+		const refs = actionsByOutputType[outputTypeName]?.map(name => ({ $ref: `#/definitions/${name}` }))
+		definitions[`ActionUnionThatOutputs_${outputTypeName}`] = { anyOf: refs }
+	}
+
+	const allActionsRefs = Object.keys(actions).map(name => ({ $ref: `#/definitions/${name}` }))
+	definitions.ActionUnion = { anyOf: allActionsRefs }
+
+	const finalSchema = {
+		type: 'object',
+		properties: {
+			execution: { $ref: '#/definitions/ActionUnion' }
+		},
+		required: ['execution'],
+		additionalProperties: false,
+		definitions,
+		$schema: 'http://json-schema.org/draft-07/schema#'
+	}
 
 	return {
-		actionSchemas,
-		async executeAction<A extends keyof AP>({
-			action,
-			params,
-			context
-		}: {
-			action: A
-			params: z.infer<AP[A]['schema']>
-			context: ActionContext
-		}): Promise<HandlerReturnType<AP[A]['handler']>> {
-			const actionConfig = actions[action]
-			if (!actionConfig) {
-				throw new Error(`Action not found: ${String(action)}`)
-			}
-			const validatedParams = actionConfig.schema.parse(params)
-			return actionConfig.handler(validatedParams, context)
+		type: 'json_schema' as const,
+		json_schema: {
+			name: 'schema',
+			strict: true,
+			schema: finalSchema
 		}
 	}
 }

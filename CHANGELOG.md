@@ -1,3 +1,4 @@
+- [2024-12-06] [stash](https://github.com/RubricLab/actions/commit/e880b74538f5f24b8311b3bdf120b1058c0c60d1)
 - [2024-10-24] [add notify-monorepo action](https://github.com/RubricLab/actions/commit/6114893404f23d68deebfdd521d3aa2dd09617df)
 - [2024-10-22] [add tsconfig to actions](https://github.com/RubricLab/actions/commit/ee614af0fd2366b6f20f5799d9baebd82e1d203c)
 - [2024-10-03] [mod lint script](https://github.com/RubricLab/actions/commit/ac5fd2794fd2702d5c3b290e0ee0ce7aa3fb09eb)
