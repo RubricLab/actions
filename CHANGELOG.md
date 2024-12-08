@@ -1,3 +1,4 @@
+- [2024-12-08] [cleanup pass](https://github.com/RubricLab/actions/commit/309e6fff5aba5f48833601228631b9f0fb490a6b)
 - [2024-12-08] [big](https://github.com/RubricLab/actions/commit/981aef87bc01ad2a1ea1e67f193eb2c1e28a1d4a)
 - [2024-12-08] [better](https://github.com/RubricLab/actions/commit/72348cfd63a6c630ff5743430a233ce0fd60d1f8)
 - [2024-12-08] [stahs](https://github.com/RubricLab/actions/commit/66a96681ec58560d9ab51f0750a4f1b692c934df)
