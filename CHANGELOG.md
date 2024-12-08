@@ -1,3 +1,4 @@
+- [2024-12-08] [working, a bit messy](https://github.com/RubricLab/actions/commit/53c54305c5f164df8e0c8b98bde306ffef881405)
 - [2024-12-07] [eureka!!](https://github.com/RubricLab/actions/commit/f080d1fbde2f16a08188766ff35dca951f4fc977)
 - [2024-12-06] [stash](https://github.com/RubricLab/actions/commit/e880b74538f5f24b8311b3bdf120b1058c0c60d1)
 - [2024-10-24] [add notify-monorepo action](https://github.com/RubricLab/actions/commit/6114893404f23d68deebfdd521d3aa2dd09617df)
