@@ -1,1 +1,1 @@
-export { createAction } from './lib/utils'
+export { createAction, createActionsExecutor } from './lib/utils'
