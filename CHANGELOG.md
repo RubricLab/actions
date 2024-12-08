@@ -1,3 +1,4 @@
+- [2024-12-08] [typesafe stash](https://github.com/RubricLab/actions/commit/a9a7301a433bd6eb94b22b68396364cc487fb198)
 - [2024-12-08] [stash 2](https://github.com/RubricLab/actions/commit/5e68fe91f62eb3787d08bcab095d9d744803f87d)
 - [2024-12-08] [stash](https://github.com/RubricLab/actions/commit/600c7fba1ae9c4c6482e563da33b36cfc19d2b88)
 - [2024-12-08] [dirty type fixes](https://github.com/RubricLab/actions/commit/743b41256f1de3a134ea3bcbf0859692f2ac1320)

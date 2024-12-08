@@ -1,6 +1,5 @@
 import { z } from 'zod'
 
-// Original definitions with type safety:
 export type ActionDefinition<S extends z.ZodRawShape, OutSchema extends z.ZodTypeAny> = {
 	name: string
 	schema: {
@@ -18,11 +17,9 @@ export function createAction<S extends z.ZodRawShape, Out extends z.ZodTypeAny>(
 	return def
 }
 
-// Helpers to extract input/output types from actions
 type InputOfAction<A> = A extends ActionDefinition<infer S, any> ? z.infer<z.ZodObject<S>> : never
 type OutputOfAction<A> = A extends ActionDefinition<any, infer O> ? z.infer<O> : never
 
-// ParamType, ActionInvocation, ActionChain, and OutputOfActionChain remain similar
 export type ParamType<Actions, T> =
 	| T
 	| ActionChain<Actions extends Record<string, ActionDefinition<any, any>> ? Actions : never, T>
@@ -71,6 +68,16 @@ type TopLevelSchemaType<Actions extends Record<string, ActionDefinition<any, any
 	execution: ActionUnionType<Actions>
 }
 
+function makeNonEmptyUnion(schemas: z.ZodTypeAny[]): z.ZodTypeAny {
+	if (schemas.length === 0) {
+		throw new Error('No schemas provided for union.')
+	}
+	if (schemas.length === 1) {
+		return schemas[0] ?? (undefined as never)
+	}
+	return z.union(schemas as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]])
+}
+
 export function createActionsExecutor<Actions extends Record<string, ActionDefinition<any, any>>>(
 	actions: Actions
 ) {
@@ -92,14 +99,30 @@ export function createActionsExecutor<Actions extends Record<string, ActionDefin
 
 	const outputUnions: Record<string, z.ZodTypeAny> = {}
 
-	for (const outName of Object.keys(actionsByOutputName)) {
-		outputUnions[outName] = z
-			.lazy(() =>
-				z.union(
-					actionsByOutputName[outName].map(n => actionSchemas[n]) as [z.ZodTypeAny, ...z.ZodTypeAny[]]
-				)
-			)
-			.describe(`ActionUnionThatOutputs_${outName}`)
+	for (const outName in actionsByOutputName) {
+		outputUnions[outName] = z.lazy(() => {
+			const schemaArray =
+				actionsByOutputName[outName]?.map(n => actionSchemas[n] ?? (undefined as never)) ??
+				(undefined as never)
+			return makeNonEmptyUnion(schemaArray)
+		})
+	}
+
+	for (const [name, action] of Object.entries(actions)) {
+		const shape = action.schema.input.shape
+		const paramsShape: Record<string, z.ZodTypeAny> = {}
+
+		for (const key in shape) {
+			const val = shape[key]
+			paramsShape[key] = paramSchemaForType(val)
+		}
+
+		actionSchemas[name] = z
+			.object({
+				action: z.literal(name),
+				params: z.object(paramsShape).strict()
+			})
+			.describe(name)
 	}
 
 	function paramSchemaForType(paramSchema: z.ZodTypeAny): z.ZodTypeAny {
@@ -121,24 +144,10 @@ export function createActionsExecutor<Actions extends Record<string, ActionDefin
 		return paramSchema
 	}
 
-	for (const [name, action] of Object.entries(actions)) {
-		const shape = action.schema.input.shape
-		const paramsShape: Record<string, z.ZodTypeAny> = {}
-		for (const [key, val] of Object.entries(shape)) {
-			paramsShape[key] = paramSchemaForType(val)
-		}
-
-		actionSchemas[name] = z
-			.object({
-				action: z.literal(name),
-				params: z.object(paramsShape).strict()
-			})
-			.describe(name)
-	}
-
-	const ActionUnion = z
-		.lazy(() => z.union(Object.values(actionSchemas) as [z.ZodTypeAny, ...z.ZodTypeAny[]]))
-		.describe('ActionUnion')
+	const ActionUnion = z.lazy(() => {
+		const schemaArray = Object.values(actionSchemas)
+		return makeNonEmptyUnion(schemaArray)
+	})
 
 	const schemaBase = z
 		.object({
@@ -147,7 +156,6 @@ export function createActionsExecutor<Actions extends Record<string, ActionDefin
 		.strict()
 		.describe('TopLevelSchema')
 
-	// Cast schema to the precise inferred type
 	const schema = schemaBase as z.ZodType<TopLevelSchemaType<Actions>>
 
 	function execute<Chain extends ActionChain<Actions>>(
