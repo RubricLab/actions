@@ -1,3 +1,4 @@
+- [2024-12-08] [better](https://github.com/RubricLab/actions/commit/72348cfd63a6c630ff5743430a233ce0fd60d1f8)
 - [2024-12-08] [stahs](https://github.com/RubricLab/actions/commit/66a96681ec58560d9ab51f0750a4f1b692c934df)
 - [2024-12-08] [typesafe stash](https://github.com/RubricLab/actions/commit/a9a7301a433bd6eb94b22b68396364cc487fb198)
 - [2024-12-08] [stash 2](https://github.com/RubricLab/actions/commit/5e68fe91f62eb3787d08bcab095d9d744803f87d)

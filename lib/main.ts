@@ -1,34 +1,33 @@
 import { createHash } from 'node:crypto'
 import { z } from 'zod'
 
-// ============= Action and Type Definitions =============
-
-export type ActionDefinition<S extends z.ZodRawShape, OutSchema extends z.ZodTypeAny> = {
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+type ActionDefinition<In extends z.ZodRawShape = any, Out extends z.ZodTypeAny = any> = {
 	name: string
 	schema: {
-		input: z.ZodObject<S>
-		output: OutSchema
+		input: z.ZodObject<In>
+		output: Out
 	}
-	execute: (args: z.infer<z.ZodObject<S>>) => z.infer<OutSchema>
+	execute: (args: z.infer<z.ZodObject<In>>) => z.infer<Out>
 }
 
-export function createAction<S extends z.ZodRawShape, Out extends z.ZodTypeAny>(def: {
+export function createAction<In extends z.ZodRawShape, Out extends z.ZodTypeAny>(def: {
 	name: string
-	schema: { input: z.ZodObject<S>; output: Out }
-	execute: (args: z.infer<z.ZodObject<S>>) => z.infer<Out>
-}): ActionDefinition<S, Out> {
+	schema: { input: z.ZodObject<In>; output: Out }
+	execute: (args: z.infer<z.ZodObject<In>>) => z.infer<Out>
+}): ActionDefinition<In, Out> {
 	return def
 }
 
-type InputOfAction<A> = A extends ActionDefinition<infer S, any> ? z.infer<z.ZodObject<S>> : never
-type OutputOfAction<A> = A extends ActionDefinition<any, infer O> ? z.infer<O> : never
+type InputOfAction<A> = A extends ActionDefinition<infer S> ? z.infer<z.ZodObject<S>> : never
+type OutputOfAction<A> = A extends ActionDefinition<infer _, infer O> ? z.infer<O> : never
 
-export type ParamType<Actions, T> =
+type ParamType<Actions, T> =
 	| T
-	| ActionChain<Actions extends Record<string, ActionDefinition<any, any>> ? Actions : never, T>
+	| ActionChain<Actions extends Record<string, ActionDefinition> ? Actions : never, T>
 
-export type ActionInvocation<
-	Actions extends Record<string, ActionDefinition<any, any>>,
+type ActionInvocation<
+	Actions extends Record<string, ActionDefinition>,
 	ActionName extends keyof Actions
 > = {
 	action: ActionName
@@ -40,23 +39,20 @@ export type ActionInvocation<
 	}
 }
 
-export type ActionChain<
-	Actions extends Record<string, ActionDefinition<any, any>>,
-	ExpectedOutput = unknown
-> = {
+type ActionChain<Actions extends Record<string, ActionDefinition>, ExpectedOutput = unknown> = {
 	[K in keyof Actions]: OutputOfAction<Actions[K]> extends ExpectedOutput
 		? ActionInvocation<Actions, K>
 		: never
 }[keyof Actions]
 
-export type OutputOfActionChain<
-	Actions extends Record<string, ActionDefinition<any, any>>,
+type OutputOfActionChain<
+	Actions extends Record<string, ActionDefinition>,
 	Chain extends ActionChain<Actions>
 > = Chain extends ActionInvocation<Actions, infer ActionName>
 	? OutputOfAction<Actions[ActionName]>
 	: never
 
-type ActionUnionType<Actions extends Record<string, ActionDefinition<any, any>>> = {
+type ActionUnionType<Actions extends Record<string, ActionDefinition>> = {
 	[K in keyof Actions]: {
 		action: K
 		params: {
@@ -67,13 +63,10 @@ type ActionUnionType<Actions extends Record<string, ActionDefinition<any, any>>>
 	}
 }[keyof Actions]
 
-type TopLevelSchemaType<Actions extends Record<string, ActionDefinition<any, any>>> = {
+type TopLevelSchemaType<Actions extends Record<string, ActionDefinition>> = {
 	execution: ActionUnionType<Actions>
 }
 
-// ============= Automatic Naming Helpers =============
-
-// Generate a signature string based on the schema structure
 function generateSignature(schema: z.ZodTypeAny): string {
 	const def = schema._def
 
@@ -89,63 +82,51 @@ function generateSignature(schema: z.ZodTypeAny): string {
 		case z.ZodFirstPartyTypeKind.ZodObject: {
 			const shape = def.shape()
 			const entries = Object.entries(shape)
-				.map(([k, v]) => `${k}-${generateSignature(v)}`)
+				.map(([k, v]) => `${k}-${generateSignature(v as z.ZodTypeAny)}`)
 				.sort()
-			return 'object_' + entries.join('_')
+			return `object_${entries.join('_')}`
 		}
 		case z.ZodFirstPartyTypeKind.ZodUnion: {
 			const options = def.options.map((opt: z.ZodTypeAny) => generateSignature(opt)).sort()
-			return 'union_' + options.join('_or_')
+			return `union_${options.join('_or_')}`
 		}
-		// Add cases for array, enum, optional, nullable, etc., if needed.
 		default:
 			return 'unknown'
 	}
 }
 
-// Create a stable short hash from the signature
 function shortHash(str: string): string {
 	return createHash('sha1').update(str).digest('hex').slice(0, 8)
+	// return str
 }
 
-// Generate a stable name for the schema
 function stableName(schema: z.ZodTypeAny): string {
 	const signature = generateSignature(schema)
 	return `Schema_${shortHash(signature)}`
 }
 
-// A function that ensures the schema is described with a stable name if not already described
 function stableDescribe(schema: z.ZodTypeAny): z.ZodTypeAny {
 	if (schema._def.description) return schema
 	const name = stableName(schema)
 	return schema.describe(name)
 }
 
-// Create a union safely
 function makeNonEmptyUnion(schemas: z.ZodTypeAny[]): z.ZodTypeAny {
 	if (schemas.length === 0) {
 		throw new Error('No schemas provided for union.')
 	}
 	if (schemas.length === 1) {
-		return schemas[0]!
+		return schemas[0] ?? (undefined as never)
 	}
 	return z.union(schemas as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]])
 }
 
-export function makeCustomResponseFormat<ParsedT>(
-	jsonSchema: any, // The JSON schema definition
+type JsonSchema = Record<string, unknown>
+
+function makeCustomResponseFormat<ParsedT>(
+	jsonSchema: JsonSchema,
 	parser: (content: string) => ParsedT
-): {
-	__output: ParsedT
-	$brand: 'auto-parseable-response-format'
-	$parseRaw(content: string): ParsedT
-	type: 'json_schema'
-	json_schema: {
-		name: string
-		strict: true
-		schema: any
-	}
-} {
+) {
 	const response_format = {
 		type: 'json_schema',
 		json_schema: {
@@ -168,25 +149,27 @@ export function makeCustomResponseFormat<ParsedT>(
 		}
 	})
 
-	return obj as any
+	return obj as {
+		__output: ParsedT
+		$brand: 'auto-parseable-response-format'
+		$parseRaw(content: string): ParsedT
+		type: 'json_schema'
+		json_schema: {
+			name: string
+			strict: true
+			schema: JsonSchema
+		}
+	}
 }
 
-// ============= Main Executor Factory =============
-
-export function createActionsExecutor<Actions extends Record<string, ActionDefinition<any, any>>>(
+export function createActionsExecutor<Actions extends Record<string, ActionDefinition>>(
 	actions: Actions
 ) {
 	function getOutputSchemaName(schema: z.ZodTypeAny): string {
-		// Instead of requiring .describe(), we generate a name from its structure
-		// We'll use the signature itself or a hash.
-		// But we must use some stable naming for output type unions.
-		return stableName(schema) // This gives a unique name even for output schema
+		return stableName(schema)
 	}
 
 	const actionsByOutputName: Record<string, string[]> = {}
-	const actionSchemas: Record<string, z.ZodTypeAny> = {}
-
-	// Group actions by their output schema name
 	for (const [name, action] of Object.entries(actions)) {
 		const outName = getOutputSchemaName(action.schema.output)
 		if (!actionsByOutputName[outName]) {
@@ -195,48 +178,27 @@ export function createActionsExecutor<Actions extends Record<string, ActionDefin
 		actionsByOutputName[outName].push(name)
 	}
 
-	const outputUnions: Record<string, z.ZodTypeAny> = {}
-
-	// Create lazy unions for actions producing the same output
-	for (const outName in actionsByOutputName) {
-		outputUnions[outName] = z.lazy(() => {
-			const schemaArray = actionsByOutputName[outName].map(n => actionSchemas[n])
-			return stableDescribe(makeNonEmptyUnion(schemaArray))
-		})
-	}
-
+	const actionSchemas: Record<string, z.ZodTypeAny> = {}
 	function paramSchemaForType(paramSchema: z.ZodTypeAny): z.ZodTypeAny {
-		const sig = generateSignature(paramSchema)
-
-		// Try to match known primitives
-		if (sig === 'string' && outputUnions['string']) {
-			return stableDescribe(z.union([paramSchema, outputUnions['string']]))
-		}
-		if (sig === 'number' && outputUnions['number']) {
-			return stableDescribe(z.union([paramSchema, outputUnions['number']]))
-		}
-		if (sig === 'boolean' && outputUnions['boolean']) {
-			return stableDescribe(z.union([paramSchema, outputUnions['boolean']]))
+		const outName = getOutputSchemaName(paramSchema)
+		if (actionsByOutputName[outName]) {
+			const possibleActions = actionsByOutputName[outName].map(
+				n => actionSchemas[n] ?? (undefined as never)
+			)
+			return stableDescribe(
+				z.union([paramSchema, ...possibleActions] as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]])
+			)
 		}
 
-		// If it's a described schema (like a contact), we identified its output union by stableName
-		const outName = stableName(paramSchema)
-		if (outputUnions[outName]) {
-			return stableDescribe(z.union([paramSchema, outputUnions[outName]]))
-		}
-
-		// Otherwise, just describe the param schema itself
 		return stableDescribe(paramSchema)
 	}
 
-	// Build each action's schema
 	for (const [name, action] of Object.entries(actions)) {
 		const shape = action.schema.input.shape
 		const paramsShape: Record<string, z.ZodTypeAny> = {}
 
 		for (const key in shape) {
-			const val = shape[key]
-			paramsShape[key] = paramSchemaForType(val)
+			paramsShape[key] = paramSchemaForType(shape[key])
 		}
 
 		actionSchemas[name] = stableDescribe(
@@ -247,15 +209,12 @@ export function createActionsExecutor<Actions extends Record<string, ActionDefin
 		)
 	}
 
-	// Create the main ActionUnion
 	const ActionUnion = z.lazy(() => {
 		const schemaArray = Object.values(actionSchemas)
 		return stableDescribe(makeNonEmptyUnion(schemaArray))
 	})
 
 	const schemaBase = z.object({ execution: ActionUnion }).strict()
-
-	// Cast schema to the precise inferred type
 	const schema = schemaBase as z.ZodType<TopLevelSchemaType<Actions>>
 
 	function execute<Chain extends ActionChain<Actions>>(
@@ -288,111 +247,106 @@ export function createActionsExecutor<Actions extends Record<string, ActionDefin
 		return action.execute(validatedInput)
 	}
 
-	// TODO, Generate this programatically and generically
+	function zodToJsonSchema(zodType: z.ZodTypeAny) {
+		const def = zodType._def
+		switch (def.typeName) {
+			case z.ZodFirstPartyTypeKind.ZodString:
+				return { type: 'string' }
+			case z.ZodFirstPartyTypeKind.ZodNumber:
+				return { type: 'number' }
+			case z.ZodFirstPartyTypeKind.ZodBoolean:
+				return { type: 'boolean' }
+			case z.ZodFirstPartyTypeKind.ZodLiteral:
+				return { type: typeof def.value, const: def.value }
+			case z.ZodFirstPartyTypeKind.ZodObject: {
+				const shape = def.shape()
+				const properties: Record<string, unknown> = {}
+				const required: string[] = []
+				for (const [key, val] of Object.entries(shape)) {
+					properties[key] = zodToJsonSchema(val as z.ZodTypeAny)
+					required.push(key)
+				}
+				return {
+					type: 'object',
+					properties,
+					required,
+					additionalProperties: false
+				}
+			}
+			default:
+				return {}
+		}
+	}
+	const definitions: Record<string, unknown> = {}
 
-	const customJsonSchema = {
+	function ensureOutputDefinition(schema: z.ZodTypeAny): string {
+		const name = stableName(schema)
+		if (!definitions[name]) {
+			definitions[name] = zodToJsonSchema(schema)
+		}
+		return name
+	}
+
+	for (const [_, action] of Object.entries(actions)) {
+		ensureOutputDefinition(action.schema.output)
+	}
+
+	function paramToJsonSchema(paramSchema: z.ZodTypeAny) {
+		const outName = getOutputSchemaName(paramSchema)
+
+		const baseSchema = zodToJsonSchema(paramSchema)
+		if (actionsByOutputName[outName]) {
+			const possibleActions = actionsByOutputName[outName].map(aName => {
+				return { $ref: `#/definitions/${aName}Action` }
+			})
+			return { anyOf: [baseSchema, ...possibleActions] }
+		}
+		return baseSchema
+	}
+
+	for (const [actionName, action] of Object.entries(actions)) {
+		const paramsShape = action.schema.input.shape
+		const paramProps: Record<string, unknown> = {}
+		const required: string[] = []
+
+		for (const key in paramsShape) {
+			paramProps[key] = paramToJsonSchema(paramsShape[key])
+			required.push(key)
+		}
+
+		definitions[`${actionName}Action`] = {
+			type: 'object',
+			properties: {
+				action: { type: 'string', const: actionName },
+				params: {
+					type: 'object',
+					properties: paramProps,
+					required,
+					additionalProperties: false
+				}
+			},
+			required: ['action', 'params'],
+			additionalProperties: false
+		}
+	}
+
+	const actionUnion = {
+		anyOf: Object.keys(actions).map(aName => ({ $ref: `#/definitions/${aName}Action` }))
+	}
+
+	const jsonSchema = {
+		$schema: 'http://json-schema.org/draft-07/schema#',
 		type: 'object',
 		properties: {
-			execution: {
-				$ref: '#/definitions/ActionUnion'
-			}
+			execution: actionUnion
 		},
 		required: ['execution'],
 		additionalProperties: false,
-		definitions: {
-			ActionUnion: {
-				anyOf: [
-					{ $ref: '#/definitions/getFirstContactFromSearchAction' },
-					{ $ref: '#/definitions/getFirstFBContactFromSearchAction' },
-					{ $ref: '#/definitions/sendEmailAction' }
-				]
-			},
-			getFirstContactFromSearchAction: {
-				type: 'object',
-				properties: {
-					action: {
-						type: 'string',
-						const: 'getFirstContactFromSearch'
-					},
-					params: {
-						type: 'object',
-						properties: {
-							search: { type: 'string' }
-						},
-						required: ['search'],
-						additionalProperties: false
-					}
-				},
-				required: ['action', 'params'],
-				additionalProperties: false
-			},
-			getFirstFBContactFromSearchAction: {
-				type: 'object',
-				properties: {
-					action: {
-						type: 'string',
-						const: 'getFirstFBContactFromSearch'
-					},
-					params: {
-						type: 'object',
-						properties: {
-							search: { type: 'string' }
-						},
-						required: ['search'],
-						additionalProperties: false
-					}
-				},
-				required: ['action', 'params'],
-				additionalProperties: false
-			},
-			sendEmailAction: {
-				type: 'object',
-				properties: {
-					action: {
-						type: 'string',
-						const: 'sendEmail'
-					},
-					params: {
-						type: 'object',
-						properties: {
-							to: {
-								anyOf: [
-									{ $ref: '#/definitions/contact' },
-									{ $ref: '#/definitions/getFirstContactFromSearchAction' }
-								]
-							},
-							content: { type: 'string' }
-						},
-						required: ['to', 'content'],
-						additionalProperties: false
-					}
-				},
-				required: ['action', 'params'],
-				additionalProperties: false
-			},
-			contact: {
-				type: 'object',
-				properties: {
-					type: {
-						type: 'string',
-						const: 'contactId'
-					},
-					id: {
-						type: 'string'
-					}
-				},
-				required: ['type', 'id'],
-				additionalProperties: false
-			}
-		},
-		$schema: 'http://json-schema.org/draft-07/schema#'
+		definitions
 	}
 
-	const response_format = makeCustomResponseFormat<z.infer<typeof schema>>(
-		customJsonSchema,
-		content => {
-			return schema.parse(JSON.parse(content))
-		}
+	const response_format = makeCustomResponseFormat<z.infer<typeof schema>>(jsonSchema, content =>
+		schema.parse(JSON.parse(content))
 	)
 
 	return { execute, schema, response_format }
