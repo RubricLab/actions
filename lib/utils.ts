@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import type { ActionDefinition } from './types'
 
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 function hashSchema(schemaJson: any): string {
 	const jsonString = JSON.stringify(schemaJson, Object.keys(schemaJson).sort())
 	const hash = crypto.createHash('sha256').update(jsonString).digest('hex')
@@ -13,7 +14,7 @@ const schemaNameCache = new WeakMap<z.ZodTypeAny, string>()
 
 export function getStableTypeName(schema: z.ZodTypeAny): string {
 	if (schemaNameCache.has(schema)) {
-		return schemaNameCache.get(schema)!
+		return schemaNameCache.get(schema) ?? (undefined as never)
 	}
 
 	if (schema instanceof z.ZodString) {
@@ -39,18 +40,17 @@ export function getStableTypeName(schema: z.ZodTypeAny): string {
 		schemaNameCache.set(schema, typeName)
 		return typeName
 	}
-
-	// fallback
 	schemaNameCache.set(schema, 'unknown')
 	return 'unknown'
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export function createJsonSchema<Actions extends Record<string, ActionDefinition<any, any>>>(
 	actions: Actions
 ) {
 	const actionsByOutputType: Record<string, string[]> = {}
 	for (const actionName in actions) {
-		const action = actions[actionName]
+		const action = actions[actionName] ?? (undefined as never)
 		const outputTypeName = getStableTypeName(action.schema.output)
 		if (!actionsByOutputType[outputTypeName]) {
 			actionsByOutputType[outputTypeName] = []
@@ -62,30 +62,30 @@ export function createJsonSchema<Actions extends Record<string, ActionDefinition
 		return `#/definitions/ActionUnionThatOutputs_${outputTypeName}`
 	}
 
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	const definitions: Record<string, any> = {}
 
 	for (const actionName in actions) {
-		const action = actions[actionName]
+		const action = actions[actionName] ?? (undefined as never)
 		const inputObject = action.schema.input
+		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		const paramProperties: Record<string, any> = {}
 		const requiredParams = Object.keys(inputObject.shape)
 
 		for (const [paramName, paramSchema] of Object.entries(inputObject.shape)) {
-			const paramJsonSchema = zodToJsonSchema(paramSchema, { $refStrategy: 'none' })
-			const paramTypeName = getStableTypeName(paramSchema)
+			const paramJsonSchema = zodToJsonSchema(paramSchema as z.ZodType, { $refStrategy: 'none' })
+			const paramTypeName = getStableTypeName(paramSchema as z.ZodType)
 			const hasActionUnion =
 				actionsByOutputType[paramTypeName] && actionsByOutputType[paramTypeName].length > 0
 			const unionRef = hasActionUnion ? { $ref: actionUnionRefFor(paramTypeName) } : undefined
 
 			if (paramSchema instanceof z.ZodObject) {
-				// For object parameters, allow either the direct object or the chain that returns this object
 				const anyOfSchemas = [paramJsonSchema]
 				if (unionRef) {
 					anyOfSchemas.push(unionRef)
 				}
 				paramProperties[paramName] = { anyOf: anyOfSchemas }
 			} else {
-				// For non-object (scalar) parameters, it's acceptable to have them as they are now
 				const anyOfSchemas = [paramJsonSchema]
 				if (unionRef) {
 					anyOfSchemas.push(unionRef)

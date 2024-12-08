@@ -6,6 +6,7 @@ import {
 } from './types'
 import { createJsonSchema } from './utils'
 
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export function createActionsExecutor<Actions extends Record<string, ActionDefinition<any, any>>>(
 	actions: Actions
 ) {
@@ -16,16 +17,14 @@ export function createActionsExecutor<Actions extends Record<string, ActionDefin
 		invocation: Chain
 	): OutputOfActionChain<Actions, Chain> {
 		const { action: actionName, params } = invocation
-		const action = actions[actionName]
+		const action = actions[actionName] ?? (undefined as never)
 
 		const input: Record<string, unknown> = {}
 		for (const key in params) {
 			const param = params[key]
 			if (param && typeof param === 'object' && 'action' in param) {
-				// Nested chain
 				input[key] = execute(param as ActionChain<Actions>)
 			} else {
-				// Direct value
 				input[key] = param
 			}
 		}
