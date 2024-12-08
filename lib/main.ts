@@ -1,137 +1,158 @@
 import { z } from 'zod'
-import {
-	type ActionChain,
-	type ActionDefinition,
-	ActionInvocation,
-	type OutputOfActionChain,
-	createAction
-} from './types'
 
-// We will create a more elaborate schema construction function
+// Original definitions with type safety:
+export type ActionDefinition<S extends z.ZodRawShape, OutSchema extends z.ZodTypeAny> = {
+	name: string
+	schema: {
+		input: z.ZodObject<S>
+		output: OutSchema
+	}
+	execute: (args: z.infer<z.ZodObject<S>>) => z.infer<OutSchema>
+}
+
+export function createAction<S extends z.ZodRawShape, Out extends z.ZodTypeAny>(def: {
+	name: string
+	schema: { input: z.ZodObject<S>; output: Out }
+	execute: (args: z.infer<z.ZodObject<S>>) => z.infer<Out>
+}): ActionDefinition<S, Out> {
+	return def
+}
+
+// Helpers to extract input/output types from actions
+type InputOfAction<A> = A extends ActionDefinition<infer S, any> ? z.infer<z.ZodObject<S>> : never
+type OutputOfAction<A> = A extends ActionDefinition<any, infer O> ? z.infer<O> : never
+
+// ParamType, ActionInvocation, ActionChain, and OutputOfActionChain remain similar
+export type ParamType<Actions, T> =
+	| T
+	| ActionChain<Actions extends Record<string, ActionDefinition<any, any>> ? Actions : never, T>
+
+export type ActionInvocation<
+	Actions extends Record<string, ActionDefinition<any, any>>,
+	ActionName extends keyof Actions
+> = {
+	action: ActionName
+	params: {
+		[P in keyof InputOfAction<Actions[ActionName]>]: ParamType<
+			Actions,
+			InputOfAction<Actions[ActionName]>[P]
+		>
+	}
+}
+
+export type ActionChain<
+	Actions extends Record<string, ActionDefinition<any, any>>,
+	ExpectedOutput = unknown
+> = {
+	[K in keyof Actions]: OutputOfAction<Actions[K]> extends ExpectedOutput
+		? ActionInvocation<Actions, K>
+		: never
+}[keyof Actions]
+
+export type OutputOfActionChain<
+	Actions extends Record<string, ActionDefinition<any, any>>,
+	Chain extends ActionChain<Actions>
+> = Chain extends ActionInvocation<Actions, infer ActionName>
+	? OutputOfAction<Actions[ActionName]>
+	: never
+
+type ActionUnionType<Actions extends Record<string, ActionDefinition<any, any>>> = {
+	[K in keyof Actions]: {
+		action: K
+		params: {
+			[P in keyof InputOfAction<Actions[K]>]:
+				| InputOfAction<Actions[K]>[P]
+				| ActionChain<Actions, InputOfAction<Actions[K]>[P]>
+		}
+	}
+}[keyof Actions]
+
+type TopLevelSchemaType<Actions extends Record<string, ActionDefinition<any, any>>> = {
+	execution: ActionUnionType<Actions>
+}
+
 export function createActionsExecutor<Actions extends Record<string, ActionDefinition<any, any>>>(
 	actions: Actions
 ) {
-	/**
-	 * First, gather all actions and their outputs. We want to:
-	 * - Create a map from output type -> list of actions producing that type.
-	 * - Create a zod schema for each action invocation.
-	 */
-
-	// Extract output schema mapping
-	type AnyAction = Actions[keyof Actions]
-
-	// Get a unique signature for each output schema so we can group actions by output type.
-	// For simplicity, we attempt a naive approach:
-	// - If the output is a primitive (string, number, boolean), use that type as the key.
-	// - If the output is an object schema, use a string describing it.
-	// In a real scenario, you'd want a robust hashing.
-	function outputTypeKey(schema: z.ZodTypeAny): string {
-		const def = schema._def
-		if (schema instanceof z.ZodString) return 'string'
-		if (schema instanceof z.ZodNumber) return 'number'
-		if (schema instanceof z.ZodBoolean) return 'boolean'
-		// For object schemas, we can try to name them by their shape keys or a hash.
-		// Here we just say it's an object and append some stable identifier.
-		if (schema instanceof z.ZodObject) {
-			const shapeKeys = Object.keys(schema.shape)
-			// A stable pseudo-identifier from keys:
-			return 'object_' + shapeKeys.join('_')
-		}
-		// Fallback:
-		return 'unknown'
+	function getOutputSchemaName(schema: z.ZodTypeAny): string {
+		if (schema.description) return schema.description
+		throw new Error('Output schema has no description. Please use .describe() on your output schema.')
 	}
 
+	const actionsByOutputName: Record<string, string[]> = {}
 	const actionSchemas: Record<string, z.ZodTypeAny> = {}
-	const outputToActionsMap: Record<string, string[]> = {}
 
-	// Step 1: Identify all actions and group by output type
 	for (const [name, action] of Object.entries(actions)) {
-		const key = outputTypeKey(action.schema.output)
-		if (!outputToActionsMap[key]) {
-			outputToActionsMap[key] = []
+		const outName = getOutputSchemaName(action.schema.output)
+		if (!actionsByOutputName[outName]) {
+			actionsByOutputName[outName] = []
 		}
-		outputToActionsMap[key].push(name)
+		actionsByOutputName[outName].push(name)
 	}
 
-	/**
-	 * We'll create placeholders (z.lazy) for each "ActionUnionThatOutputs_..." schema.
-	 * These are unions of actions that produce a given output type.
-	 */
+	const outputUnions: Record<string, z.ZodTypeAny> = {}
 
-	const outputUnionSchemas: Record<string, z.ZodTypeAny> = {}
-
-	for (const [outKey, actionNames] of Object.entries(outputToActionsMap)) {
-		// We'll create a lazy reference that will later be filled in after we create each action schema
-		outputUnionSchemas[outKey] = z
+	for (const outName of Object.keys(actionsByOutputName)) {
+		outputUnions[outName] = z
 			.lazy(() =>
 				z.union(
-					actionNames.map(actionName => actionSchemas[actionName]) as [z.ZodTypeAny, ...z.ZodTypeAny[]]
+					actionsByOutputName[outName].map(n => actionSchemas[n]) as [z.ZodTypeAny, ...z.ZodTypeAny[]]
 				)
 			)
-			.describe(`ActionUnionThatOutputs_${outKey}`)
+			.describe(`ActionUnionThatOutputs_${outName}`)
 	}
 
-	/**
-	 * Now create each action schema. Each action schema is:
-	 * {
-	 *   action: literal(actionName),
-	 *   params: { ... }
-	 * }
-	 * For each param, we union the original schema with the appropriate output union if needed.
-	 * That means:
-	 * - We know the param schema from action.schema.input.
-	 * - If it's a string param, we do z.union([z.string(), outputUnionSchemas['string']])
-	 * - If it's a number param, similarly for 'number'
-	 * - If it's a contact object, we identify its output key and union with that.
-	 */
-
 	function paramSchemaForType(paramSchema: z.ZodTypeAny): z.ZodTypeAny {
-		const paramOutKey = outputTypeKey(paramSchema)
-		const unionSchema = outputUnionSchemas[paramOutKey]
-		// If we have a matching union schema, we can allow chaining
-		if (unionSchema) {
-			return z.union([paramSchema, unionSchema])
+		const outName = paramSchema.description
+		if (outName && outputUnions[outName]) {
+			return z.union([paramSchema, outputUnions[outName]])
 		}
-		// Otherwise, just return the param schema as-is
+
+		if (paramSchema instanceof z.ZodString && outputUnions.string) {
+			return z.union([paramSchema, outputUnions.string])
+		}
+		if (paramSchema instanceof z.ZodNumber && outputUnions.number) {
+			return z.union([paramSchema, outputUnions.number])
+		}
+		if (paramSchema instanceof z.ZodBoolean && outputUnions.boolean) {
+			return z.union([paramSchema, outputUnions.boolean])
+		}
+
 		return paramSchema
 	}
 
 	for (const [name, action] of Object.entries(actions)) {
-		const inputShape = action.schema.input.shape
-		const paramSchemas: Record<string, z.ZodTypeAny> = {}
-
-		for (const [paramName, paramType] of Object.entries(inputShape)) {
-			paramSchemas[paramName] = paramSchemaForType(paramType)
+		const shape = action.schema.input.shape
+		const paramsShape: Record<string, z.ZodTypeAny> = {}
+		for (const [key, val] of Object.entries(shape)) {
+			paramsShape[key] = paramSchemaForType(val)
 		}
 
 		actionSchemas[name] = z
 			.object({
 				action: z.literal(name),
-				params: z.object(paramSchemas).strict()
+				params: z.object(paramsShape).strict()
 			})
 			.describe(name)
 	}
-
-	/**
-	 * Now that each action schema is created, the lazy unions referencing them should resolve properly.
-	 * The top-level chain schema (ActionUnion) will be a union of all action schemas.
-	 */
 
 	const ActionUnion = z
 		.lazy(() => z.union(Object.values(actionSchemas) as [z.ZodTypeAny, ...z.ZodTypeAny[]]))
 		.describe('ActionUnion')
 
-	const schema = z
+	const schemaBase = z
 		.object({
 			execution: ActionUnion
 		})
 		.strict()
 		.describe('TopLevelSchema')
 
+	// Cast schema to the precise inferred type
+	const schema = schemaBase as z.ZodType<TopLevelSchemaType<Actions>>
+
 	function execute<Chain extends ActionChain<Actions>>(
 		invocation: Chain
 	): OutputOfActionChain<Actions, Chain> {
-		// Validate first
 		const parsed = schema.parse({ execution: invocation })
 		return executeAction(parsed.execution)
 	}

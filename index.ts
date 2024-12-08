@@ -1,2 +1,2 @@
-export { createActionsExecutor } from './lib/main'
-export { createAction } from './lib/types'
+export { createActionsExecutor, createAction } from './lib/main'
+// export { createAction } from './lib/types'
