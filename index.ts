@@ -1,15 +1,15 @@
 import { createHash } from 'node:crypto'
 import { z } from 'zod'
 
-// biome-ignore lint/suspicious/noExplicitAny: single required any to not overwhelm generics
+// biome-ignore lint/suspicious/noExplicitAny: single required "any" to not overwhelm generics
 type ActionDefinition<In extends z.ZodRawShape = any, Out extends z.ZodTypeAny = any> = {
-	name: string
 	schema: { input: z.ZodObject<In>; output: Out }
 	execute: (args: z.infer<z.ZodObject<In>>) => z.infer<Out>
 }
 
+type AnyActions = Record<string, ActionDefinition>
+
 export function createAction<In extends z.ZodRawShape, Out extends z.ZodTypeAny>(def: {
-	name: string
 	schema: { input: z.ZodObject<In>; output: Out }
 	execute: (args: z.infer<z.ZodObject<In>>) => z.infer<Out>
 }): ActionDefinition<In, Out> {
@@ -17,12 +17,10 @@ export function createAction<In extends z.ZodRawShape, Out extends z.ZodTypeAny>
 }
 
 type InputOfAction<A> = A extends ActionDefinition<infer S> ? z.infer<z.ZodObject<S>> : never
+
 type OutputOfAction<A> = A extends ActionDefinition<infer _, infer O> ? z.infer<O> : never
 
-type ActionInvocation<
-	Actions extends Record<string, ActionDefinition>,
-	Name extends keyof Actions
-> = {
+type ActionInvocation<Actions extends AnyActions, Name extends keyof Actions> = {
 	action: Name
 	params: {
 		[P in keyof InputOfAction<Actions[Name]>]:
@@ -30,18 +28,19 @@ type ActionInvocation<
 			| ActionChain<Actions, InputOfAction<Actions[Name]>[P]>
 	}
 }
-type ActionChain<Actions extends Record<string, ActionDefinition>, ExpectedOutput = unknown> = {
+
+type ActionChain<Actions extends AnyActions, ExpectedOutput = unknown> = {
 	[K in keyof Actions]: OutputOfAction<Actions[K]> extends ExpectedOutput
 		? ActionInvocation<Actions, K>
 		: never
 }[keyof Actions]
 
 type OutputOfActionChain<
-	Actions extends Record<string, ActionDefinition>,
+	Actions extends AnyActions,
 	Chain extends ActionChain<Actions>
 > = Chain extends ActionInvocation<Actions, infer N> ? OutputOfAction<Actions[N]> : never
 
-type ActionUnionType<Actions extends Record<string, ActionDefinition>> = {
+type ActionUnionType<Actions extends AnyActions> = {
 	[K in keyof Actions]: {
 		action: K
 		params: {
@@ -52,7 +51,7 @@ type ActionUnionType<Actions extends Record<string, ActionDefinition>> = {
 	}
 }[keyof Actions]
 
-type TopLevelSchemaType<Actions extends Record<string, ActionDefinition>> = {
+type TopLevelSchemaType<Actions extends AnyActions> = {
 	execution: ActionUnionType<Actions>
 }
 
@@ -76,6 +75,10 @@ function generateSignature(schema: z.ZodTypeAny): string {
 		}
 		case z.ZodFirstPartyTypeKind.ZodUnion:
 			return `union_${(def.options as z.ZodTypeAny[]).map(generateSignature).sort().join('_or_')}`
+		case z.ZodFirstPartyTypeKind.ZodEnum:
+			return `enum_${def.values.sort().join('_')}`
+		case z.ZodFirstPartyTypeKind.ZodArray:
+			return `array_${generateSignature(def.type)}`
 		default:
 			return 'unknown'
 	}
@@ -94,6 +97,7 @@ function makeNonEmptyUnion(schemas: z.ZodTypeAny[]) {
 }
 
 type JsonSchema = Record<string, unknown>
+
 function makeCustomResponseFormat<ParsedT>(jsonSchema: JsonSchema, parser: (c: string) => ParsedT) {
 	const obj = {
 		type: 'json_schema',
@@ -112,9 +116,7 @@ function makeCustomResponseFormat<ParsedT>(jsonSchema: JsonSchema, parser: (c: s
 	}
 }
 
-export function createActionsExecutor<Actions extends Record<string, ActionDefinition>>(
-	actions: Actions
-) {
+export function createActionsExecutor<Actions extends AnyActions>(actions: Actions) {
 	const actionsByOutputName: Record<string, string[]> = {}
 	Object.entries(actions).map(([name, action]) => {
 		const outName = stableName(action.schema.output)
@@ -200,8 +202,12 @@ export function createActionsExecutor<Actions extends Record<string, ActionDefin
 				const unionDef = def as z.ZodUnionDef
 				return { anyOf: unionDef.options.map((opt: z.ZodTypeAny) => zodToJsonSchema(opt)) }
 			}
+			case z.ZodFirstPartyTypeKind.ZodEnum:
+				return { type: 'string', enum: def.values }
+			case z.ZodFirstPartyTypeKind.ZodArray:
+				return { type: 'array', items: zodToJsonSchema(def.type) }
 			default:
-				return {}
+				throw ' ussur'
 		}
 	}
 
