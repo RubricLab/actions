@@ -17,7 +17,7 @@ It is designed to be awesome for developers (providing really simple and powerfu
 // next.config.ts
 import type { NextConfig } from  'next' 
 export default {
-    transpilePackages: ['@rubriclab/auth'],
+	transpilePackages: ['@rubriclab/auth'],
 	reactStrictMode: true
 } satisfies  NextConfig
 ```
@@ -230,6 +230,3 @@ const sendEmail = createAction({
 
 In this example, `sendEmail` will only be chainable with `getFirstGoogleContactFromSearch`. There will be a ts issue trying to send an email to a Facebook contact, and AI will not be able to erroneously chain.
 Under the hood, we use a hashing mechanism to ensure that objects retain their exact uniqueness. Log `response_format` to see how that works!
-
-### Known issues
-#### Hallucinations
