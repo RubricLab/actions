@@ -22,6 +22,8 @@ export default {
 } satisfies  NextConfig
 ```
 
+> If using inside the monorepo (@rubric), simply add `{"@rubriclab/actions": "*"}` to dependencies and then run `bun i`
+
 ### Define Actions
 To get started, define a few actions.
 
