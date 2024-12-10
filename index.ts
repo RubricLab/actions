@@ -4,20 +4,19 @@ import { z } from 'zod'
 // biome-ignore lint/suspicious/noExplicitAny: single required "any" to not overwhelm generics
 type ActionDefinition<In extends z.ZodRawShape = any, Out extends z.ZodTypeAny = any> = {
 	schema: { input: z.ZodObject<In>; output: Out }
-	execute: (args: z.infer<z.ZodObject<In>>) => z.infer<Out>
+	execute: (args: z.infer<z.ZodObject<In>>) => Promise<z.infer<Out>>
 }
 
 type AnyActions = Record<string, ActionDefinition>
 
 export function createAction<In extends z.ZodRawShape, Out extends z.ZodTypeAny>(def: {
 	schema: { input: z.ZodObject<In>; output: Out }
-	execute: (args: z.infer<z.ZodObject<In>>) => z.infer<Out>
+	execute: (args: z.infer<z.ZodObject<In>>) => Promise<z.infer<Out>>
 }): ActionDefinition<In, Out> {
 	return def
 }
 
 type InputOfAction<A> = A extends ActionDefinition<infer S> ? z.infer<z.ZodObject<S>> : never
-
 type OutputOfAction<A> = A extends ActionDefinition<infer _, infer O> ? z.infer<O> : never
 
 type ActionInvocation<Actions extends AnyActions, Name extends keyof Actions> = {
@@ -155,16 +154,16 @@ export function createActionsExecutor<Actions extends AnyActions>(actions: Actio
 	const schemaBase = z.object({ execution: ActionUnion }).strict()
 	const schema = schemaBase as z.ZodType<TopLevelSchemaType<Actions>>
 
-	function execute<Chain extends ActionChain<Actions>>(
+	async function execute<Chain extends ActionChain<Actions>>(
 		invocation: Chain
-	): OutputOfActionChain<Actions, Chain> {
+	): Promise<OutputOfActionChain<Actions, Chain>> {
 		const parsed = schema.parse({ execution: invocation })
-		return executeAction(parsed.execution)
+		return await executeAction(parsed.execution)
 	}
 
-	function executeAction<Chain extends ActionChain<Actions>>(
+	async function executeAction<Chain extends ActionChain<Actions>>(
 		invocation: Chain
-	): OutputOfActionChain<Actions, Chain> {
+	): Promise<OutputOfActionChain<Actions, Chain>> {
 		const { action: actionName, params } = invocation
 		const action = actions[actionName]
 		if (!action) throw new Error(`Unknown action: ${String(actionName)}`)
@@ -172,9 +171,9 @@ export function createActionsExecutor<Actions extends AnyActions>(actions: Actio
 		for (const key in params) {
 			const param = params[key]
 			input[key] =
-				param && typeof param === 'object' && 'action' in param ? executeAction(param) : param
+				param && typeof param === 'object' && 'action' in param ? await executeAction(param) : param
 		}
-		return action.execute(action.schema.input.parse(input))
+		return await action.execute(action.schema.input.parse(input))
 	}
 
 	function zodToJsonSchema(zodType: z.ZodTypeAny): unknown {
