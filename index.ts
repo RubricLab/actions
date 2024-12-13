@@ -28,7 +28,7 @@ type ActionInvocation<Actions extends AnyActions, Name extends keyof Actions> = 
 	}
 }
 
-type ActionChain<Actions extends AnyActions, ExpectedOutput = unknown> = {
+export type ActionChain<Actions extends AnyActions, ExpectedOutput = unknown> = {
 	[K in keyof Actions]: OutputOfAction<Actions[K]> extends ExpectedOutput
 		? ActionInvocation<Actions, K>
 		: never

@@ -1,3 +1,4 @@
+- [2024-12-13] [export ActionChain](https://github.com/RubricLab/actions/commit/35b77458820be10b834bf26ba8d943bd41826007)
 - [2024-12-13] [export outputOfActionChain](https://github.com/RubricLab/actions/commit/427d324a1b6b9c52def53e74802ab0c92ab1743a)
 - [2024-12-13] [support void](https://github.com/RubricLab/actions/commit/6cff05708363927be83ccfa2f12ebab8d5b53d52)
 - [2024-12-10] [promises](https://github.com/RubricLab/actions/commit/d882427190b23e807a98505c5135eb035133e15e)
