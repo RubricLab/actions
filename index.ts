@@ -65,6 +65,8 @@ function generateSignature(schema: z.ZodTypeAny): string {
 			return 'boolean'
 		case z.ZodFirstPartyTypeKind.ZodLiteral:
 			return `literal_${JSON.stringify(def.value)}`
+		case z.ZodFirstPartyTypeKind.ZodVoid:
+			return 'void'
 		case z.ZodFirstPartyTypeKind.ZodObject: {
 			const shape = def.shape()
 			const entries = Object.entries(shape)
@@ -187,6 +189,8 @@ export function createActionsExecutor<Actions extends AnyActions>(actions: Actio
 				return { type: 'boolean' }
 			case z.ZodFirstPartyTypeKind.ZodLiteral:
 				return { type: typeof def.value, const: def.value }
+			case z.ZodFirstPartyTypeKind.ZodVoid:
+				return { type: 'void' }
 			case z.ZodFirstPartyTypeKind.ZodObject: {
 				const shape = def.shape()
 				const props: Record<string, unknown> = {}
@@ -206,7 +210,7 @@ export function createActionsExecutor<Actions extends AnyActions>(actions: Actio
 			case z.ZodFirstPartyTypeKind.ZodArray:
 				return { type: 'array', items: zodToJsonSchema(def.type) }
 			default:
-				throw ' ussur'
+				throw 'Should not see this. This is an actions package error.'
 		}
 	}
 

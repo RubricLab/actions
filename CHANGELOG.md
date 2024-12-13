@@ -1,3 +1,4 @@
+- [2024-12-13] [support void](https://github.com/RubricLab/actions/commit/6cff05708363927be83ccfa2f12ebab8d5b53d52)
 - [2024-12-10] [promises](https://github.com/RubricLab/actions/commit/d882427190b23e807a98505c5135eb035133e15e)
 - [2024-12-09] [release](https://github.com/RubricLab/actions/commit/8d20b1d36a8166ee043a20db7b82242b06a028cb)
 - [2024-12-08] [cleanup](https://github.com/RubricLab/actions/commit/fee42337405868e24dd20a26c1bad661e77316f0)
