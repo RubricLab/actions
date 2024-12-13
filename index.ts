@@ -34,7 +34,7 @@ type ActionChain<Actions extends AnyActions, ExpectedOutput = unknown> = {
 		: never
 }[keyof Actions]
 
-type OutputOfActionChain<
+export type OutputOfActionChain<
 	Actions extends AnyActions,
 	Chain extends ActionChain<Actions>
 > = Chain extends ActionInvocation<Actions, infer N> ? OutputOfAction<Actions[N]> : never
