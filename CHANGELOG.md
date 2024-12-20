@@ -1,3 +1,4 @@
+- [2024-12-20] [Fix native enum support. Support optionals.](https://github.com/RubricLab/actions/commit/5b25dd57dc80418d957efc1a00276e916af2d7b6)
 - [2024-12-20] [Support native enum](https://github.com/RubricLab/actions/commit/2d48427e3e33bb32cafea71683cbcd4fb4bf8c4b)
 - [2024-12-20] [Export Zod-to-JSON-schema helper](https://github.com/RubricLab/actions/commit/1dfb96c59e6bdc913eef07466be62dbc23889ab7)
 - [2024-12-13] [export ActionChain](https://github.com/RubricLab/actions/commit/35b77458820be10b834bf26ba8d943bd41826007)

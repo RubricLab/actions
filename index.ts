@@ -3,14 +3,14 @@ import { z } from 'zod'
 
 // biome-ignore lint/suspicious/noExplicitAny: single required "any" to not overwhelm generics
 type ActionDefinition<In extends z.ZodRawShape = any, Out extends z.ZodTypeAny = any> = {
-	schema: { input: z.ZodObject<In>; output: Out }
+	schema: { input: z.ZodObject<In>; output?: Out }
 	execute: (args: z.infer<z.ZodObject<In>>) => Promise<z.infer<Out>>
 }
 
 type AnyActions = Record<string, ActionDefinition>
 
 export function createAction<In extends z.ZodRawShape, Out extends z.ZodTypeAny>(def: {
-	schema: { input: z.ZodObject<In>; output: Out }
+	schema: { input: z.ZodObject<In>; output?: Out }
 	execute: (args: z.infer<z.ZodObject<In>>) => Promise<z.infer<Out>>
 }): ActionDefinition<In, Out> {
 	return def
@@ -55,7 +55,8 @@ type TopLevelSchemaType<Actions extends AnyActions> = {
 }
 
 function generateSignature(schema: z.ZodTypeAny): string {
-	const def = schema._def
+	const def = schema?._def
+	if (!def) return 'unknown'
 	switch (def.typeName) {
 		case z.ZodFirstPartyTypeKind.ZodString:
 			return 'string'
@@ -81,7 +82,7 @@ function generateSignature(schema: z.ZodTypeAny): string {
 		case z.ZodFirstPartyTypeKind.ZodArray:
 			return `array_${generateSignature(def.type)}`
 		case z.ZodFirstPartyTypeKind.ZodNativeEnum:
-			return `native_enum_${def.values.sort().join('_')}`
+			return `native_enum_${Object.values(def.values).sort().join('_')}`
 		default:
 			return 'unknown'
 	}
@@ -120,7 +121,8 @@ function makeCustomResponseFormat<ParsedT>(jsonSchema: JsonSchema, parser: (c: s
 }
 
 export function zodToJsonSchema(zodType: z.ZodTypeAny): unknown {
-	const def = zodType._def
+	const def = zodType?._def
+	if (!def) return { type: 'unknown' }
 	switch (def.typeName) {
 		case z.ZodFirstPartyTypeKind.ZodString:
 			return { type: 'string' }
@@ -151,7 +153,9 @@ export function zodToJsonSchema(zodType: z.ZodTypeAny): unknown {
 		case z.ZodFirstPartyTypeKind.ZodArray:
 			return { type: 'array', items: zodToJsonSchema(def.type) }
 		case z.ZodFirstPartyTypeKind.ZodNativeEnum:
-			return { type: 'string', enum: def.values }
+			return { type: 'string', enum: Object.values(def.values) }
+		case z.ZodFirstPartyTypeKind.ZodOptional:
+			return zodToJsonSchema(def.innerType)
 		default:
 			throw 'Should not see this. This is an actions package error.'
 	}
