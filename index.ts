@@ -80,6 +80,8 @@ function generateSignature(schema: z.ZodTypeAny): string {
 			return `enum_${def.values.sort().join('_')}`
 		case z.ZodFirstPartyTypeKind.ZodArray:
 			return `array_${generateSignature(def.type)}`
+		case z.ZodFirstPartyTypeKind.ZodNativeEnum:
+			return `native_enum_${def.values.sort().join('_')}`
 		default:
 			return 'unknown'
 	}
@@ -148,6 +150,8 @@ export function zodToJsonSchema(zodType: z.ZodTypeAny): unknown {
 			return { type: 'string', enum: def.values }
 		case z.ZodFirstPartyTypeKind.ZodArray:
 			return { type: 'array', items: zodToJsonSchema(def.type) }
+		case z.ZodFirstPartyTypeKind.ZodNativeEnum:
+			return { type: 'string', enum: def.values }
 		default:
 			throw 'Should not see this. This is an actions package error.'
 	}
