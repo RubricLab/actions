@@ -117,6 +117,42 @@ function makeCustomResponseFormat<ParsedT>(jsonSchema: JsonSchema, parser: (c: s
 	}
 }
 
+export function zodToJsonSchema(zodType: z.ZodTypeAny): unknown {
+	const def = zodType._def
+	switch (def.typeName) {
+		case z.ZodFirstPartyTypeKind.ZodString:
+			return { type: 'string' }
+		case z.ZodFirstPartyTypeKind.ZodNumber:
+			return { type: 'number' }
+		case z.ZodFirstPartyTypeKind.ZodBoolean:
+			return { type: 'boolean' }
+		case z.ZodFirstPartyTypeKind.ZodLiteral:
+			return { type: typeof def.value, const: def.value }
+		case z.ZodFirstPartyTypeKind.ZodVoid:
+			return { type: 'void' }
+		case z.ZodFirstPartyTypeKind.ZodObject: {
+			const shape = def.shape()
+			const props: Record<string, unknown> = {}
+			const req: string[] = []
+			Object.entries(shape).map(([k, v]) => {
+				props[k] = zodToJsonSchema(v as z.ZodTypeAny)
+				req.push(k)
+			})
+			return { type: 'object', properties: props, required: req, additionalProperties: false }
+		}
+		case z.ZodFirstPartyTypeKind.ZodUnion: {
+			const unionDef = def as z.ZodUnionDef
+			return { anyOf: unionDef.options.map((opt: z.ZodTypeAny) => zodToJsonSchema(opt)) }
+		}
+		case z.ZodFirstPartyTypeKind.ZodEnum:
+			return { type: 'string', enum: def.values }
+		case z.ZodFirstPartyTypeKind.ZodArray:
+			return { type: 'array', items: zodToJsonSchema(def.type) }
+		default:
+			throw 'Should not see this. This is an actions package error.'
+	}
+}
+
 export function createActionsExecutor<Actions extends AnyActions>(actions: Actions) {
 	const actionsByOutputName: Record<string, string[]> = {}
 	Object.entries(actions).map(([name, action]) => {
@@ -176,42 +212,6 @@ export function createActionsExecutor<Actions extends AnyActions>(actions: Actio
 				param && typeof param === 'object' && 'action' in param ? await executeAction(param) : param
 		}
 		return await action.execute(action.schema.input.parse(input))
-	}
-
-	function zodToJsonSchema(zodType: z.ZodTypeAny): unknown {
-		const def = zodType._def
-		switch (def.typeName) {
-			case z.ZodFirstPartyTypeKind.ZodString:
-				return { type: 'string' }
-			case z.ZodFirstPartyTypeKind.ZodNumber:
-				return { type: 'number' }
-			case z.ZodFirstPartyTypeKind.ZodBoolean:
-				return { type: 'boolean' }
-			case z.ZodFirstPartyTypeKind.ZodLiteral:
-				return { type: typeof def.value, const: def.value }
-			case z.ZodFirstPartyTypeKind.ZodVoid:
-				return { type: 'void' }
-			case z.ZodFirstPartyTypeKind.ZodObject: {
-				const shape = def.shape()
-				const props: Record<string, unknown> = {}
-				const req: string[] = []
-				Object.entries(shape).map(([k, v]) => {
-					props[k] = zodToJsonSchema(v as z.ZodTypeAny)
-					req.push(k)
-				})
-				return { type: 'object', properties: props, required: req, additionalProperties: false }
-			}
-			case z.ZodFirstPartyTypeKind.ZodUnion: {
-				const unionDef = def as z.ZodUnionDef
-				return { anyOf: unionDef.options.map((opt: z.ZodTypeAny) => zodToJsonSchema(opt)) }
-			}
-			case z.ZodFirstPartyTypeKind.ZodEnum:
-				return { type: 'string', enum: def.values }
-			case z.ZodFirstPartyTypeKind.ZodArray:
-				return { type: 'array', items: zodToJsonSchema(def.type) }
-			default:
-				throw 'Should not see this. This is an actions package error.'
-		}
 	}
 
 	const definitions: Record<string, unknown> = {}
