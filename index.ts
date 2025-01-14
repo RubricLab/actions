@@ -156,8 +156,14 @@ export function zodToJsonSchema(zodType: z.ZodTypeAny): unknown {
 			return { type: 'string', enum: Object.values(def.values) }
 		case z.ZodFirstPartyTypeKind.ZodOptional:
 			return zodToJsonSchema(def.innerType)
+		case z.ZodFirstPartyTypeKind.ZodDate:
+			return { type: 'string', format: 'date-time' }
+		case z.ZodFirstPartyTypeKind.ZodDefault:
+			return zodToJsonSchema(def.innerType)
+		case z.ZodFirstPartyTypeKind.ZodNullable:
+			return zodToJsonSchema(def.innerType)
 		default:
-			throw 'Should not see this. This is an actions package error.'
+			throw `Should not see this. This is an actions package error. Unknown type: ${def.typeName}`
 	}
 }
 
