@@ -213,6 +213,16 @@ export function createActionsExecutor<Actions extends AnyActions>(actions: Actio
 		return await executeAction(parsed.execution)
 	}
 
+	async function getActionSchema(actionName: keyof Actions): Promise<z.ZodObject<z.ZodRawShape>> {
+		const action = actions[actionName]
+		if (!action) throw new Error(`Unknown action: ${String(actionName)}`)
+		return action.schema.input.shape
+	}
+
+	async function getActionNames(): Promise<Array<keyof Actions>> {
+		return Object.keys(actions)
+	}
+
 	async function executeAction<Chain extends ActionChain<Actions>>(
 		invocation: Chain
 	): Promise<OutputOfActionChain<Actions, Chain>> {
@@ -281,5 +291,5 @@ export function createActionsExecutor<Actions extends AnyActions>(actions: Actio
 		schema.parse(JSON.parse(c))
 	)
 
-	return { execute, schema, response_format }
+	return { execute, getActionSchema, getActionNames, schema, response_format }
 }
