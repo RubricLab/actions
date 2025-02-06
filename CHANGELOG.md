@@ -1,3 +1,4 @@
+- [2025-02-06] [Fix action schema return type](https://github.com/RubricLab/actions/commit/406304738d72c23746394050ea97b5d5f783cfd8)
 - [2025-02-06] [Serialize schema before returning](https://github.com/RubricLab/actions/commit/ab0f5f7c6e84fba7450135e0c1e1ac398a246d98)
 - [2025-02-04] [Add helpers to list actions/schemas](https://github.com/RubricLab/actions/commit/cee59819674a5b299ee63cfca761166e2cf6a62d)
 - [2025-01-14] [Handle more Zod base types](https://github.com/RubricLab/actions/commit/8fb8a8ab74c120ee9c0c965c615b1edbf0f53821)

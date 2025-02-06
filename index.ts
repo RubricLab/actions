@@ -213,10 +213,13 @@ export function createActionsExecutor<Actions extends AnyActions>(actions: Actio
 		return await executeAction(parsed.execution)
 	}
 
-	async function getActionSchema(actionName: keyof Actions): Promise<z.ZodObject<z.ZodRawShape>> {
+	async function getActionSchema<K extends keyof Actions>(
+		actionName: K
+	): Promise<Actions[K]['schema']['input']['shape']> {
 		const action = actions[actionName]
 		if (!action) throw new Error(`Unknown action: ${String(actionName)}`)
-		return JSON.parse(JSON.stringify(action.schema.input.shape))
+		const { shape } = action.schema.input
+		return JSON.parse(JSON.stringify(shape))
 	}
 
 	async function getActionNames(): Promise<Array<keyof Actions>> {
