@@ -3,14 +3,14 @@ import { z } from 'zod'
 
 // biome-ignore lint/suspicious/noExplicitAny: single required "any" to not overwhelm generics
 type ActionDefinition<In extends z.ZodRawShape = any, Out extends z.ZodTypeAny = any> = {
-	schema: { input: z.ZodObject<In>; output?: Out }
+	schema: { input: z.ZodObject<In>; output: Out }
 	execute: (args: z.infer<z.ZodObject<In>>) => Promise<z.infer<Out>>
 }
 
-type AnyActions = Record<string, ActionDefinition>
+export type AnyActions = Record<string, ActionDefinition>
 
 export function createAction<In extends z.ZodRawShape, Out extends z.ZodTypeAny>(def: {
-	schema: { input: z.ZodObject<In>; output?: Out }
+	schema: { input: z.ZodObject<In>; output: Out }
 	execute: (args: z.infer<z.ZodObject<In>>) => Promise<z.infer<Out>>
 }): ActionDefinition<In, Out> {
 	return def
@@ -103,21 +103,18 @@ function makeNonEmptyUnion(schemas: z.ZodTypeAny[]) {
 type JsonSchema = Record<string, unknown>
 
 function makeCustomResponseFormat<ParsedT>(jsonSchema: JsonSchema, parser: (c: string) => ParsedT) {
-	const obj = {
-		type: 'json_schema',
-		json_schema: { name: 'execution', strict: true, schema: jsonSchema }
+	const openAIFormat = {
+		type: 'json_schema' as const,
+		name: 'execution_format',
+		schema: jsonSchema
 	}
-	Object.defineProperties(obj, {
+
+	Object.defineProperties(openAIFormat, {
 		$brand: { value: 'auto-parseable-response-format', enumerable: false },
 		$parseRaw: { value: parser, enumerable: false }
 	})
-	return obj as {
-		__output: ParsedT
-		$brand: 'auto-parseable-response-format'
-		$parseRaw(c: string): ParsedT
-		type: 'json_schema'
-		json_schema: { name: string; strict: true; schema: JsonSchema }
-	}
+
+	return openAIFormat
 }
 
 export function zodToJsonSchema(zodType: z.ZodTypeAny): unknown {
@@ -133,7 +130,7 @@ export function zodToJsonSchema(zodType: z.ZodTypeAny): unknown {
 		case z.ZodFirstPartyTypeKind.ZodLiteral:
 			return { type: typeof def.value, const: def.value }
 		case z.ZodFirstPartyTypeKind.ZodVoid:
-			return { type: 'void' }
+			return { type: 'null', description: 'Represents void/no return value' }
 		case z.ZodFirstPartyTypeKind.ZodObject: {
 			const shape = def.shape()
 			const props: Record<string, unknown> = {}
