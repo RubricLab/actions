@@ -1,3 +1,4 @@
+- [2025-05-08] [Support record, null, and any](https://github.com/RubricLab/actions/commit/ae1e7b19e0223247c5390fbce4554cd8f13842c4)
 - [2025-04-29] [modifications to support new openai schema reqs.](https://github.com/RubricLab/actions/commit/5a3b29a5f30a2130503c594e53854cc203b20032)
 - [2025-02-06] [Fix action schema return type](https://github.com/RubricLab/actions/commit/406304738d72c23746394050ea97b5d5f783cfd8)
 - [2025-02-06] [Serialize schema before returning](https://github.com/RubricLab/actions/commit/ab0f5f7c6e84fba7450135e0c1e1ac398a246d98)

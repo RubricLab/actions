@@ -83,6 +83,12 @@ function generateSignature(schema: z.ZodTypeAny): string {
 			return `array_${generateSignature(def.type)}`
 		case z.ZodFirstPartyTypeKind.ZodNativeEnum:
 			return `native_enum_${Object.values(def.values).sort().join('_')}`
+		case z.ZodFirstPartyTypeKind.ZodRecord:
+			return `record_${generateSignature(def.key)}`
+		case z.ZodFirstPartyTypeKind.ZodNull:
+			return 'null'
+		case z.ZodFirstPartyTypeKind.ZodAny:
+			return 'any'
 		default:
 			return 'unknown'
 	}
@@ -155,6 +161,12 @@ export function zodToJsonSchema(zodType: z.ZodTypeAny): unknown {
 			return zodToJsonSchema(def.innerType)
 		case z.ZodFirstPartyTypeKind.ZodDate:
 			return { type: 'string', format: 'date-time' }
+		case z.ZodFirstPartyTypeKind.ZodRecord:
+			return { type: 'object', additionalProperties: zodToJsonSchema(def.value) }
+		case z.ZodFirstPartyTypeKind.ZodNull:
+			return { type: 'null' }
+		case z.ZodFirstPartyTypeKind.ZodAny:
+			return { type: 'any' }
 		case z.ZodFirstPartyTypeKind.ZodDefault:
 			return zodToJsonSchema(def.innerType)
 		case z.ZodFirstPartyTypeKind.ZodNullable:
