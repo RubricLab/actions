@@ -1,3 +1,4 @@
+- [2025-05-22] [bump zod](https://github.com/RubricLab/actions/commit/1c5143177c6efe77c2a0331a7a8e26929786b8a7)
 - [2025-05-21] [init rebuild - simplify scope](https://github.com/RubricLab/actions/commit/c5e65a877a61a462e3aec3c7df18c2b959375c7a)
 - [2025-05-08] [Support record, null, and any](https://github.com/RubricLab/actions/commit/ae1e7b19e0223247c5390fbce4554cd8f13842c4)
 - [2025-04-29] [modifications to support new openai schema reqs.](https://github.com/RubricLab/actions/commit/5a3b29a5f30a2130503c594e53854cc203b20032)
