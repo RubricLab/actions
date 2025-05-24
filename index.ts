@@ -14,9 +14,15 @@ export function createAction<I extends Record<string, z.ZodType>, O extends z.Zo
 	}
 }
 
-export type AnyAction = ReturnType<typeof createAction<Record<string, z.ZodType>, z.ZodType>>
+type ActionWithoutExecuteArgs<
+	Input extends Record<string, z.ZodType>,
+	Output extends z.ZodType
+> = Omit<ReturnType<typeof createAction<Input, Output>>, 'execute'> & {
+	// biome-ignore lint/suspicious/noExplicitAny: this is required to support generic functions that need to extend a placeholder for Actions.
+	execute: (input: any) => Promise<Output>
+}
 
-export type ActionMap = Record<string, AnyAction>
+export type AnyAction = ActionWithoutExecuteArgs<Record<string, z.ZodType>, z.ZodType>
 
 export function createActionProxy<Name extends string, Action extends AnyAction>({
 	name,
@@ -25,7 +31,7 @@ export function createActionProxy<Name extends string, Action extends AnyAction>
 	name: Name
 	input: Action['schema']['input']
 }) {
-	return z.strictObject({
+	return z.object({
 		action: z.literal(`action_${name}` as const),
 		params: z.object(input)
 	})
