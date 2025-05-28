@@ -1,3 +1,4 @@
+- [2025-05-27] [drop action name prefix](https://github.com/RubricLab/actions/commit/98f3035d76179490727078a8f8fea0ad2ea10186)
 - [2025-05-24] [scale withoutArgs pattern from tools, blocks to actions](https://github.com/RubricLab/actions/commit/bc7f4305cd12135c95f05546456a342053e30978)
 - [2025-05-22] [bump zod](https://github.com/RubricLab/actions/commit/1c5143177c6efe77c2a0331a7a8e26929786b8a7)
 - [2025-05-21] [init rebuild - simplify scope](https://github.com/RubricLab/actions/commit/c5e65a877a61a462e3aec3c7df18c2b959375c7a)

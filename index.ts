@@ -24,15 +24,15 @@ type ActionWithoutExecuteArgs<
 
 export type AnyAction = ActionWithoutExecuteArgs<Record<string, z.ZodType>, z.ZodType>
 
-export function createActionProxy<Name extends string, Action extends AnyAction>({
+export function createActionProxy<Name extends string, Input extends Record<string, z.ZodType>>({
 	name,
 	input
 }: {
 	name: Name
-	input: Action['schema']['input']
+	input: Input
 }) {
 	return z.object({
-		action: z.literal(`action_${name}` as const),
+		action: z.literal(name),
 		params: z.object(input)
 	})
 }

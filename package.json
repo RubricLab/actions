@@ -10,12 +10,12 @@
     "lint:fix": "bun x biome check --fix --unsafe . && bun x biome lint --write --unsafe ."
   },
   "name": "@rubriclab/actions",
-  "version": "0.0.39",
+  "version": "0.0.40",
   "main": "index.ts",
   "dependencies": {
     "@rubriclab/package": "*",
     "@rubriclab/config": "*",
-    "zod": "3.25.21"
+    "zod": "latest"
   },
   "simple-git-hooks": {
     "post-commit": "bun run rubriclab-postcommit"
