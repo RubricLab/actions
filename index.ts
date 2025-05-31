@@ -19,7 +19,7 @@ type ActionWithoutExecuteArgs<
 	Output extends z.ZodType
 > = Omit<ReturnType<typeof createAction<Input, Output>>, 'execute'> & {
 	// biome-ignore lint/suspicious/noExplicitAny: this is required to support generic functions that need to extend a placeholder for Actions.
-	execute: (input: any) => Promise<Output>
+	execute: (input: any) => Promise<z.infer<Output>>
 }
 
 export type AnyAction = ActionWithoutExecuteArgs<Record<string, z.ZodType>, z.ZodType>
@@ -35,4 +35,22 @@ export function createActionProxy<Name extends string, Input extends Record<stri
 		action: z.literal(name),
 		params: z.object(input)
 	})
+}
+
+export function createActionExecutor<ActionMap extends Record<string, AnyAction>>({
+	actions
+}: {
+	actions: ActionMap
+}) {
+	return {
+		async execute<ActionKey extends keyof ActionMap & string>({
+			action,
+			params
+		}: z.infer<
+			ReturnType<typeof createActionProxy<ActionKey, ActionMap[ActionKey]['schema']['input']>>
+		>) {
+			const { execute } = actions[action] ?? (undefined as never)
+			return await execute(params)
+		}
+	}
 }
