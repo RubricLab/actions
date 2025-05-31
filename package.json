@@ -2,7 +2,7 @@
 	"scripts": {
 		"generate": "bun scripts/generate.ts",
 		"watch": "bun scripts/watch.ts",
-		"prepare": "rubriclab-package prepare",
+		"prepare": "pkg prepare",
 		"bleed": "bun x npm-check-updates -u && bun i",
 		"clean": "rm -rf .next && rm -rf node_modules",
 		"format": "bun x biome format --write .",
@@ -10,7 +10,7 @@
 		"lint:fix": "bun x biome check --fix --unsafe . && bun x biome lint --write --unsafe ."
 	},
 	"name": "@rubriclab/actions",
-	"version": "0.0.42",
+	"version": "0.0.43",
 	"main": "index.ts",
 	"dependencies": {
 		"@rubriclab/package": "*",
@@ -18,7 +18,7 @@
 		"zod": "latest"
 	},
 	"simple-git-hooks": {
-		"post-commit": "bun run rubriclab-postcommit"
+		"post-commit": "pkg post-commit"
 	},
 	"publishConfig": {
 		"access": "public"

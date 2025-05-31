@@ -1,3 +1,4 @@
+- [2025-05-30] [support modified pkg/pkg](https://github.com/RubricLab/actions/commit/3723d7339083565dbd5f2fef0cf5be483586f035)
 - [2025-05-30] [add executor](https://github.com/RubricLab/actions/commit/21bbd932707a695d2b06da393cd4f48e90bddfa0)
 - [2025-05-30] [support new package/package cli](https://github.com/RubricLab/actions/commit/b13458780c5aaf9a029ffbc71f9dad5769038d25)
 - [2025-05-27] [drop action name prefix](https://github.com/RubricLab/actions/commit/98f3035d76179490727078a8f8fea0ad2ea10186)
