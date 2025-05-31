@@ -46,11 +46,27 @@ export function createActionExecutor<ActionMap extends Record<string, AnyAction>
 		async execute<ActionKey extends keyof ActionMap & string>({
 			action,
 			params
-		}: z.infer<
-			ReturnType<typeof createActionProxy<ActionKey, ActionMap[ActionKey]['schema']['input']>>
-		>) {
+		}: {
+			action: ActionKey
+			params: {
+				[K in keyof ActionMap[ActionKey]['schema']['input']]: z.infer<
+					ActionMap[ActionKey]['schema']['input'][K]
+				>
+			}
+		}) {
 			const { execute } = actions[action] ?? (undefined as never)
-			return await execute(params)
-		}
+			return (await execute(params)) as z.infer<ActionMap[ActionKey]['schema']['output']>
+		},
+		getActionDefs: async () =>
+			Object.fromEntries(
+				Object.entries(actions).map(([name, { schema }]) => [name, schema])
+			) as Record<
+				keyof ActionMap,
+				{
+					input: ActionMap[keyof ActionMap]['schema']['input']
+					output: ActionMap[keyof ActionMap]['schema']['output']
+				}
+			>,
+		__Actions: async () => undefined as unknown as ActionMap
 	}
 }

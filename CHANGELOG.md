@@ -1,3 +1,4 @@
+- [2025-05-31] [support server -> client type and key fetch for rOS (next niches)](https://github.com/RubricLab/actions/commit/e176997ddbf44f56d194af5662ae34e47b61b5e4)
 - [2025-05-30] [support modified pkg/pkg](https://github.com/RubricLab/actions/commit/3723d7339083565dbd5f2fef0cf5be483586f035)
 - [2025-05-30] [add executor](https://github.com/RubricLab/actions/commit/21bbd932707a695d2b06da393cd4f48e90bddfa0)
 - [2025-05-30] [support new package/package cli](https://github.com/RubricLab/actions/commit/b13458780c5aaf9a029ffbc71f9dad5769038d25)
