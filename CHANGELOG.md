@@ -1,3 +1,4 @@
+- [2025-05-30] [support new package/package cli](https://github.com/RubricLab/actions/commit/b13458780c5aaf9a029ffbc71f9dad5769038d25)
 - [2025-05-27] [drop action name prefix](https://github.com/RubricLab/actions/commit/98f3035d76179490727078a8f8fea0ad2ea10186)
 - [2025-05-24] [scale withoutArgs pattern from tools, blocks to actions](https://github.com/RubricLab/actions/commit/bc7f4305cd12135c95f05546456a342053e30978)
 - [2025-05-22] [bump zod](https://github.com/RubricLab/actions/commit/1c5143177c6efe77c2a0331a7a8e26929786b8a7)
