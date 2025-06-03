@@ -1,16 +1,20 @@
 import z from 'zod/v4'
+import type { $strict, JSONSchema } from 'zod/v4/core'
 
 export function createAction<I extends Record<string, z.ZodType>, O extends z.ZodType>({
 	schema,
-	execute
+	execute,
+	description
 }: {
 	schema: { input: I; output: O }
-	execute: (input: { [K in keyof I]: z.infer<I[K]> }) => Promise<z.infer<O>>
+	execute: (input: z.infer<z.ZodObject<I, $strict>>) => Promise<z.infer<O>>
+	description: string | undefined
 }) {
 	return {
 		type: 'action' as const,
 		schema,
-		execute
+		execute,
+		description
 	}
 }
 
@@ -69,4 +73,37 @@ export function createActionExecutor<ActionMap extends Record<string, AnyAction>
 			>,
 		__Actions: async () => undefined as unknown as ActionMap
 	}
+}
+
+export function createActionDocs<ActionMap extends Record<string, AnyAction>>({
+	actions
+}: {
+	actions: ActionMap
+}) {
+	return Object.entries(actions)
+		.map(
+			([
+				name,
+				{
+					schema: { input, output },
+					description
+				}
+			]) => `## ${String(name)}
+### Description:
+${description ?? 'No description provided'}
+### Input Schema:
+${JSON.stringify(
+	z.toJSONSchema(
+		createActionProxy({
+			name,
+			input
+		})
+	),
+	null,
+	2
+)}
+### Output Schema:
+${JSON.stringify(z.toJSONSchema(output), null, 2)}`
+		)
+		.join('\n\n')
 }
