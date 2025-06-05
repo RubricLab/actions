@@ -17,7 +17,7 @@ It is part of Rubric's architecture for Generative UI when used with:
 // next.config.ts
 import type { NextConfig } from  'next' 
 export default {
-	transpilePackages: ['@rubriclab/auth'],
+	transpilePackages: ['@rubriclab/actions'],
 	reactStrictMode: true
 } satisfies  NextConfig
 ```
