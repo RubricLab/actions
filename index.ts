@@ -1,5 +1,5 @@
 import z from 'zod/v4'
-import type { $strict, JSONSchema } from 'zod/v4/core'
+import type { $strict } from 'zod/v4/core'
 
 export function createAction<I extends Record<string, z.ZodType>, O extends z.ZodType>({
 	schema,
