@@ -8,7 +8,7 @@ It is part of Rubric's architecture for Generative UI when used with:
 - [@rubriclab/agents](https://github.com/rubriclab/agents)
 - [@rubriclab/events](https://github.com/rubriclab/events)
 
-## [Demo](https://chat.rubric.sh)
+[Demo](https://chat.rubric.sh)
 
 ## Get Started
 ### Installation
