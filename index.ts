@@ -10,17 +10,17 @@ export function createAction<I extends z.ZodType, O extends z.ZodType>({
 	description: string | undefined
 }) {
 	return {
-		type: 'action' as const,
-		schema,
+		description,
 		execute,
-		description
+		schema,
+		type: 'action' as const
 	}
 }
 
-type ActionWithoutExecuteArgs<
-	Input extends z.ZodType,
-	Output extends z.ZodType
-> = Omit<ReturnType<typeof createAction<Input, Output>>, 'execute'> & {
+type ActionWithoutExecuteArgs<Input extends z.ZodType, Output extends z.ZodType> = Omit<
+	ReturnType<typeof createAction<Input, Output>>,
+	'execute'
+> & {
 	// biome-ignore lint/suspicious/noExplicitAny: this is required to support generic functions that need to extend a placeholder for Actions.
 	execute: (input: any) => Promise<z.infer<Output>>
 }
@@ -46,13 +46,13 @@ export function createActionExecutor<ActionMap extends Record<string, AnyAction>
 	actions: ActionMap
 }) {
 	return {
+		__Actions: async () => undefined as unknown as ActionMap,
 		async execute<ActionKey extends keyof ActionMap & string>({
 			action,
 			params
 		}: {
 			action: ActionKey
 			params: z.infer<ActionMap[ActionKey]['schema']['input']>
-			
 		}) {
 			const { execute } = actions[action] ?? (undefined as never)
 			return (await execute(params)) as z.infer<ActionMap[ActionKey]['schema']['output']>
@@ -66,8 +66,7 @@ export function createActionExecutor<ActionMap extends Record<string, AnyAction>
 					input: ActionMap[keyof ActionMap]['schema']['input']
 					output: ActionMap[keyof ActionMap]['schema']['output']
 				}
-			>,
-		__Actions: async () => undefined as unknown as ActionMap
+			>
 	}
 }
 
@@ -91,8 +90,8 @@ ${description ?? 'No description provided'}
 ${JSON.stringify(
 	z.toJSONSchema(
 		createActionProxy({
-			name,
-			input
+			input,
+			name
 		})
 	),
 	null,
