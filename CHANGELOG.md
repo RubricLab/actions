@@ -1,3 +1,4 @@
+- [2025-06-30] [actions don't force inputs to be records](https://github.com/RubricLab/actions/commit/634f6c5577a8c7206628ab87ca1965a8ba60523a)
 - [2025-05-31] [support server -> client type and key fetch for rOS (next niches)](https://github.com/RubricLab/actions/commit/e176997ddbf44f56d194af5662ae34e47b61b5e4)
 - [2025-05-30] [support modified pkg/pkg](https://github.com/RubricLab/actions/commit/3723d7339083565dbd5f2fef0cf5be483586f035)
 - [2025-05-30] [add executor](https://github.com/RubricLab/actions/commit/21bbd932707a695d2b06da393cd4f48e90bddfa0)
