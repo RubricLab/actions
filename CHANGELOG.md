@@ -1,3 +1,4 @@
+- [2025-07-01] [run format](https://github.com/RubricLab/actions/commit/eca8c60261776c303f1f47d4440043d18ce875af)
 - [2025-07-01] [consolidate biome scripts](https://github.com/RubricLab/actions/commit/522be5e423f21f0380f6cd927c6ba3743b75f4af)
 - [2025-07-01] [consolidate biome scripts](https://github.com/RubricLab/actions/commit/09ee244696e00a688c0cb27587680be0de20a7f6)
 - [2025-07-01] [format, lint](https://github.com/RubricLab/actions/commit/777399c015079680d062852b6523133171fced0c)
