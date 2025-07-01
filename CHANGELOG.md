@@ -1,3 +1,4 @@
+- [2025-07-01] [format, lint](https://github.com/RubricLab/actions/commit/777399c015079680d062852b6523133171fced0c)
 - [2025-06-30] [sort keys](https://github.com/RubricLab/actions/commit/45e17f62e2d8fef84e2296b20e320b3b6d955acf)
 - [2025-06-30] [actions don't force inputs to be records](https://github.com/RubricLab/actions/commit/634f6c5577a8c7206628ab87ca1965a8ba60523a)
 - [2025-05-31] [support server -> client type and key fetch for rOS (next niches)](https://github.com/RubricLab/actions/commit/e176997ddbf44f56d194af5662ae34e47b61b5e4)
