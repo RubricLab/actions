@@ -1,3 +1,5 @@
+- [2025-07-01] [consolidate biome scripts](https://github.com/RubricLab/actions/commit/522be5e423f21f0380f6cd927c6ba3743b75f4af)
+- [2025-07-01] [consolidate biome scripts](https://github.com/RubricLab/actions/commit/09ee244696e00a688c0cb27587680be0de20a7f6)
 - [2025-07-01] [format, lint](https://github.com/RubricLab/actions/commit/777399c015079680d062852b6523133171fced0c)
 - [2025-06-30] [sort keys](https://github.com/RubricLab/actions/commit/45e17f62e2d8fef84e2296b20e320b3b6d955acf)
 - [2025-06-30] [actions don't force inputs to be records](https://github.com/RubricLab/actions/commit/634f6c5577a8c7206628ab87ca1965a8ba60523a)
