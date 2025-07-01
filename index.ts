@@ -1,13 +1,12 @@
 import z from 'zod/v4'
-import type { $strict } from 'zod/v4/core'
 
-export function createAction<I extends Record<string, z.ZodType>, O extends z.ZodType>({
+export function createAction<I extends z.ZodType, O extends z.ZodType>({
 	schema,
 	execute,
 	description
 }: {
 	schema: { input: I; output: O }
-	execute: (input: z.infer<z.ZodObject<I, $strict>>) => Promise<z.infer<O>>
+	execute: (input: z.infer<I>) => Promise<z.infer<O>>
 	description: string | undefined
 }) {
 	return {
@@ -19,16 +18,16 @@ export function createAction<I extends Record<string, z.ZodType>, O extends z.Zo
 }
 
 type ActionWithoutExecuteArgs<
-	Input extends Record<string, z.ZodType>,
+	Input extends z.ZodType,
 	Output extends z.ZodType
 > = Omit<ReturnType<typeof createAction<Input, Output>>, 'execute'> & {
 	// biome-ignore lint/suspicious/noExplicitAny: this is required to support generic functions that need to extend a placeholder for Actions.
 	execute: (input: any) => Promise<z.infer<Output>>
 }
 
-export type AnyAction = ActionWithoutExecuteArgs<Record<string, z.ZodType>, z.ZodType>
+export type AnyAction = ActionWithoutExecuteArgs<z.ZodType, z.ZodType>
 
-export function createActionProxy<Name extends string, Input extends Record<string, z.ZodType>>({
+export function createActionProxy<Name extends string, Input extends z.ZodType>({
 	name,
 	input
 }: {
@@ -37,7 +36,7 @@ export function createActionProxy<Name extends string, Input extends Record<stri
 }) {
 	return z.object({
 		action: z.literal(name),
-		params: z.object(input)
+		params: input
 	})
 }
 
@@ -52,11 +51,8 @@ export function createActionExecutor<ActionMap extends Record<string, AnyAction>
 			params
 		}: {
 			action: ActionKey
-			params: {
-				[K in keyof ActionMap[ActionKey]['schema']['input']]: z.infer<
-					ActionMap[ActionKey]['schema']['input'][K]
-				>
-			}
+			params: z.infer<ActionMap[ActionKey]['schema']['input']>
+			
 		}) {
 			const { execute } = actions[action] ?? (undefined as never)
 			return (await execute(params)) as z.infer<ActionMap[ActionKey]['schema']['output']>
