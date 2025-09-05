@@ -6,8 +6,8 @@ export function createAction<I extends z.ZodType, O extends z.ZodType>({
 	description
 }: {
 	schema: { input: I; output: O }
-	execute: (input: z.infer<I>) => Promise<z.infer<O>>
-	description: string | undefined
+	execute: (input: z.infer<I>) => Promise<z.infer<O>> | z.infer<O>
+	description?: string
 }) {
 	return {
 		description,
@@ -22,7 +22,7 @@ type ActionWithoutExecuteArgs<Input extends z.ZodType, Output extends z.ZodType>
 	'execute'
 > & {
 	// biome-ignore lint/suspicious/noExplicitAny: this is required to support generic functions that need to extend a placeholder for Actions.
-	execute: (input: any) => Promise<z.infer<Output>>
+	execute: (input: any) => Promise<z.infer<Output>> | z.infer<Output>
 }
 
 export type AnyAction = ActionWithoutExecuteArgs<z.ZodType, z.ZodType>
