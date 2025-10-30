@@ -6,7 +6,7 @@ export function createAction<I extends z.ZodType, O extends z.ZodType>({
 	description
 }: {
 	schema: { input: I; output: O }
-	execute: (input: z.infer<I>) => Promise<z.infer<O>> | z.infer<O>
+	execute: (input: z.infer<I>) => Promise<z.infer<O>>
 	description?: string
 }) {
 	return {
