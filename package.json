@@ -9,6 +9,10 @@
 	"publishConfig": {
 		"access": "public"
 	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/RubricLab/actions.git"
+	},
 	"scripts": {
 		"bleed": "bun x npm-check-updates -u && bun i",
 		"clean": "rm -rf .next && rm -rf node_modules",
