@@ -32,7 +32,7 @@ To get started, define a few actions.
 
 ```ts
 import { createAction } from '@rubriclab/actions'
-import { z } from 'zod/v4'
+import { z } from 'zod'
 
 const convertStringToNumber = createAction({
 	schema: {

@@ -1,3 +1,4 @@
+- [2025-12-13] [Trigger release](https://github.com/RubricLab/actions/commit/b23d66f5952dc2e17889f22a04fd1c72011c8e30)
 - [2025-10-30] [Fix createTool compat](https://github.com/RubricLab/actions/commit/64dbee0ca7c1ab6c51c7a7a620f877a046c39d80)
 - [2025-09-05] [Update example. Make desc optional. Allow sync exec func.](https://github.com/RubricLab/actions/commit/c0d21e2ba5f85ce93e54c00e2734d3b8dd70ad07)
 - [2025-07-01] [run format](https://github.com/RubricLab/actions/commit/eca8c60261776c303f1f47d4440043d18ce875af)
